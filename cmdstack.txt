@@ -1,0 +1,21 @@
+aws cloudformation create-stack --stack-name network --template-body file://network_withoutNat.yaml 
+aws cloudformation create-stack --stack-name sns --template-body file://sns.yml
+aws cloudformation create-stack --stack-name jenkins --template-body file://jenkins.yml --parameters ParameterKey=KeyName,ParameterValue=PierwszaSiec ParameterKey=StackName,ParameterValue=network ParameterKey=Snsarn,ParameterValue=arn:aws:sns:eu-west-3:numer_konta:sns-SNSTopic-1RK8D36BZHV  --capabilities CAPABILITY_IAM
+aws cloudformation create-stack --stack-name backendofjenkins --template-body file://backend.yml --parameters ParameterKey=KeyName,ParameterValue=PierwszaSiec ParameterKey=StackName,ParameterValue=network ParameterKey=StackNameofjenkins,ParameterValue=jenkins  --capabilities CAPABILITY_IAM
+
+aws cloudformation describe-stacks --stack-name network
+aws cloudformation describe-stacks --stack-name sns
+aws cloudformation describe-stacks --stack-name jenkins
+aws cloudformation describe-stacks --stack-name backendofjenkins
+
+
+aws cloudformation update-stack --stack-name network --template-body file://network_nat.yaml  
+
+aws cloudformation delete-stack --stack-name backendofjenkins
+aws cloudformation delete-stack --stack-name jenkins
+aws cloudformation delete-stack --stack-name sns
+aws cloudformation delete-stack --stack-name network
+
+
+ssh -i "PierwszaSiec.pem" ec2-user@10.10.1.165
+ssh -i "PierwszaSiec.pem" ec2-user@10.10.2.40

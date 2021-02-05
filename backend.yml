@@ -1,0 +1,120 @@
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances. Linked to AWS Parameter
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: must be the name of an existing EC2 KeyPair
+  StackName:
+    Description: VPC stack name 
+    Type: String
+    Default: "network"
+  StackNameofjenkins:
+    Description : Name of Jenkins stack
+    Type: String
+    Default: "jenkins"
+
+Mappings: 
+  RegionMap: 
+  # Paris
+    eu-west-3:
+      bastion: ami-01c72e187b357583b
+      backend: ami-01c72e187b357583b
+  # Ireland      
+    eu-west-1:
+      bastion: ami-0b4b2d87bdd32212a
+      backend: ami-0b4b2d87bdd32212a
+  # Frankfurt  
+    eu-central-1:
+      bastion: ami-0e342d72b12109f91
+      backend: ami-0e342d72b12109f91
+  # London      
+    eu-west-2:
+      bastion: ami-0eb89db7593b5d434
+      backend: ami-0eb89db7593b5d434  # ubuntu
+
+      
+Resources:
+  privateSecurityGroupNat:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH from Bastion
+      VpcId: 
+         Fn::ImportValue: !Sub "${StackName}-VPCid"
+      SecurityGroupIngress:
+          -
+            IpProtocol: tcp
+            FromPort: 22
+            ToPort: 22
+            SourceSecurityGroupId:
+               Fn::ImportValue: !Sub "${StackNameofjenkins}-SecurityGroupID"
+
+      
+      SecurityGroupEgress:
+          - 
+            IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+            CidrIp: 0.0.0.0/0
+          - 
+            IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: 0.0.0.0/0
+            
+    # Backends 
+
+  Ec2InstanceBackEnd1: 
+    Type: AWS::EC2::Instance
+    Properties: 
+     ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", backend]
+     InstanceType: 't2.micro'
+     KeyName: !Ref KeyName 
+ 
+     SubnetId: 
+          Fn::ImportValue: !Sub "${StackName}-Private1Subent"
+     SecurityGroupIds:
+        -
+           !Ref privateSecurityGroupNat
+     Tags:
+        - Key: "projekt"
+          Value: "pierwszaSiec"
+     UserData:
+      'Fn::Base64':
+         !Sub |
+         #!/bin/bash
+         exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+  Ec2InstanceBackEnd2: 
+    Type: AWS::EC2::Instance
+    Properties: 
+     ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", backend]
+     InstanceType: 't2.micro'
+     KeyName: !Ref KeyName 
+   
+     SubnetId: 
+          Fn::ImportValue: !Sub "${StackName}-Private2Subent"
+     SecurityGroupIds:
+        -
+          !Ref privateSecurityGroupNat
+     Tags:
+        - Key: "projekt"
+          Value: "pierwszaSiec"
+
+     UserData:
+      'Fn::Base64':
+         !Sub |
+         #!/bin/bash
+         exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+
+  
+#end outputs
+Outputs:
+    IPAdressBackEnd1:
+      Description: "BackEnd1 IP Addres"
+      Value: !GetAtt   Ec2InstanceBackEnd1.PrivateIp
+      Export:
+        Name: "Backend1IPaddress"        
+    IPAdressBackEnd2:
+      Description: "BackEnd2 IP Addres"
+      Value: !GetAtt   Ec2InstanceBackEnd2.PrivateIp
+      Export:
+        Name: "Backend2IPaddress"           
+    

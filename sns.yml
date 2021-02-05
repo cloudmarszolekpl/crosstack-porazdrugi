@@ -1,0 +1,39 @@
+Resources:
+  SNSTopic:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      Subscription:
+        - Endpoint: "robert@marszolek.pl"
+          Protocol: "email"
+      Tags:
+        -
+          Key: "projekt"
+          Value: "pierwszaSiec"
+
+  SNSTopicPolicy:
+    Type: 'AWS::SNS::TopicPolicy'
+    Properties:
+      PolicyDocument:
+        Id: MyTopicPolicy
+        Version: 2012-10-17
+        Statement:
+          - Sid: Statement-id
+            Effect: Allow
+            Principal:
+              AWS: '*'
+            Action: 'sns:Publish'
+            Resource: !Ref SNSTopic
+            Condition:
+              ArnLike:
+                'aws:SourceArn': 'arn:aws:ec2:::*'
+      Topics:
+        - !Ref SNSTopic
+
+Outputs:
+    SNSarn:
+      Description: "sns"
+      Value:
+        #!GetAtt SNSTopic.TopicName
+        !Ref SNSTopic
+      Export:
+        Name: "SNSTopic"
